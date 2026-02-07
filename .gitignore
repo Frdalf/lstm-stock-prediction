@@ -1,0 +1,81 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Testing
+.pytest_cache/
+tests/__pycache__/
+.coverage
+htmlcov/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ML/Data Files - Large files that shouldn't be in git
+models/
+data/
+*.keras
+*.h5
+*.pkl
+*.joblib
+
+# Logs
+logs/
+*.log
+
+# Results and outputs
+results/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.csv
+
+# Environment variables
+.env
+.env.local
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# TensorFlow
+*.tfevents
+checkpoint/
+
+# Flask
+instance/
+.webassets-cache

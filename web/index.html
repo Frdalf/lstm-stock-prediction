@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LSTM Stock Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+    <div class="particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1 class="logo">📈 Stock Analytics</h1>
+            <p class="subtitle">LSTM Neural Network powered stock analysis & prediction</p>
+        </header>
+
+        <div class="search-section">
+            <div class="search-box">
+                <input type="text" class="search-input" id="ticker-input"
+                    placeholder="Enter ticker (e.g., AAPL, BBCA.JK)" onkeypress="if(event.key==='Enter') predict()">
+                <button class="btn-primary" id="predict-btn" onclick="predict()">
+                    🔍 Analyze
+                </button>
+            </div>
+
+            <div class="quick-picks">
+                <span class="quick-pick" onclick="quickPick('AAPL')">AAPL</span>
+                <span class="quick-pick" onclick="quickPick('GOOGL')">GOOGL</span>
+                <span class="quick-pick" onclick="quickPick('MSFT')">MSFT</span>
+                <span class="quick-pick" onclick="quickPick('TSLA')">TSLA</span>
+                <span class="quick-pick" onclick="quickPick('NVDA')">NVDA</span>
+                <span class="quick-pick" onclick="quickPick('BBCA.JK')">BBCA.JK</span>
+                <span class="quick-pick" onclick="quickPick('TLKM.JK')">TLKM.JK</span>
+            </div>
+
+            <button class="help-toggle" onclick="toggleHelp()">❓ Cara Menggunakan Ticker</button>
+            <div id="help-content" class="help-content hidden">
+                <h4>📌 Format Ticker Saham</h4>
+                <table class="suffix-table">
+                    <tr>
+                        <th>Bursa</th>
+                        <th>Suffix</th>
+                        <th>Contoh</th>
+                    </tr>
+                    <tr>
+                        <td>🇺🇸 USA (NYSE/NASDAQ)</td>
+                        <td><em>tanpa suffix</em></td>
+                        <td>AAPL, GOOGL</td>
+                    </tr>
+                    <tr>
+                        <td>🇮🇩 Indonesia (BEI)</td>
+                        <td><code>.JK</code></td>
+                        <td>BBCA.JK, TLKM.JK</td>
+                    </tr>
+                    <tr>
+                        <td>🇸🇬 Singapore</td>
+                        <td><code>.SI</code></td>
+                        <td>DBS.SI</td>
+                    </tr>
+                    <tr>
+                        <td>🇭🇰 Hong Kong</td>
+                        <td><code>.HK</code></td>
+                        <td>0700.HK</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div id="loading" class="skeleton-container hidden">
+            <!-- Skeleton Header -->
+            <div class="skeleton-header">
+                <div class="skeleton-header-left">
+                    <div class="skeleton skeleton-icon"></div>
+                    <div>
+                        <div class="skeleton skeleton-title"></div>
+                        <div class="skeleton skeleton-subtitle"></div>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div class="skeleton skeleton-price"></div>
+                    <div class="skeleton skeleton-badge" style="margin-left: auto;"></div>
+                </div>
+            </div>
+
+            <!-- Skeleton Grid -->
+            <div class="skeleton-grid">
+                <div class="skeleton-card span-4">
+                    <div class="skeleton skeleton-card-title"></div>
+                    <div class="skeleton skeleton-signal"></div>
+                    <div class="skeleton skeleton-stat"></div>
+                    <div class="skeleton skeleton-stat"></div>
+                </div>
+                <div class="skeleton-card span-4">
+                    <div class="skeleton skeleton-card-title"></div>
+                    <div class="skeleton skeleton-stat"></div>
+                    <div class="skeleton skeleton-stat"></div>
+                    <div class="skeleton skeleton-stat"></div>
+                </div>
+                <div class="skeleton-card span-4">
+                    <div class="skeleton skeleton-card-title"></div>
+                    <div class="skeleton skeleton-stat"></div>
+                    <div class="skeleton skeleton-stat"></div>
+                    <div class="skeleton skeleton-stat"></div>
+                </div>
+                <div class="skeleton-card span-8">
+                    <div class="skeleton skeleton-card-title"></div>
+                    <div class="skeleton skeleton-chart"></div>
+                </div>
+                <div class="skeleton-card span-4">
+                    <div class="skeleton skeleton-card-title"></div>
+                    <div class="skeleton skeleton-stat"></div>
+                    <div class="skeleton skeleton-chart" style="height: 100px;"></div>
+                </div>
+            </div>
+
+            <p style="text-align: center; color: var(--text-secondary); margin-top: 24px; font-size: 0.9rem;">
+                ⏳ Analyzing stock data with LSTM model...
+            </p>
+        </div>
+
+        <div id="error" class="error hidden"></div>
+
+        <div id="dashboard" class="dashboard hidden">
+            <!-- Stock Header -->
+            <div class="stock-header">
+                <div class="stock-title">
+                    <div class="stock-icon" id="stock-icon">A</div>
+                    <div class="stock-name">
+                        <h2 id="stock-ticker">AAPL</h2>
+                        <p class="stock-meta"><span id="stock-exchange">NYSE</span> • Last updated: <span
+                                id="last-update">-</span></p>
+                    </div>
+                </div>
+                <div class="stock-price">
+                    <div class="current-price" id="current-price">$0.00</div>
+                    <div class="price-change bullish" id="price-change">+0.00%</div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- Prediction Card -->
+                <div class="card prediction-card">
+                    <div class="card-header">
+                        <span class="card-title">🔮 AI Prediction</span>
+                    </div>
+                    <div class="prediction-display">
+                        <div class="signal-badge bullish" id="signal-badge">BULLISH</div>
+                        <div class="prediction-values">
+                            <div class="prediction-item">
+                                <label>Current</label>
+                                <div class="value" id="pred-current">$0.00</div>
+                            </div>
+                            <div class="prediction-item">
+                                <label>Predicted</label>
+                                <div class="value" id="pred-predicted">$0.00</div>
+                            </div>
+                        </div>
+                        <div class="strength-meter">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="color: var(--text-secondary); font-size: 0.8rem;">Signal Strength</span>
+                                <span id="strength-value" style="font-weight: 600;">0%</span>
+                            </div>
+                            <div class="strength-bar">
+                                <div class="strength-fill bullish" id="strength-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics Card -->
+                <div class="card stats-card">
+                    <div class="card-header">
+                        <span class="card-title">📊 Key Statistics</span>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">Open</div>
+                            <div class="stat-value" id="stat-open">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">High</div>
+                            <div class="stat-value positive" id="stat-high">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Low</div>
+                            <div class="stat-value negative" id="stat-low">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Prev Close</div>
+                            <div class="stat-value" id="stat-prev">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Volume</div>
+                            <div class="stat-value" id="stat-volume">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Avg Volume</div>
+                            <div class="stat-value" id="stat-avg-volume">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Indicators Card -->
+                <div class="card indicators-card">
+                    <div class="card-header">
+                        <span class="card-title">📈 Technical Indicators</span>
+                    </div>
+                    <div class="indicator-item">
+                        <span class="indicator-name">
+                            <span class="indicator-dot" style="background: #6366f1;"></span>
+                            SMA 20
+                        </span>
+                        <span class="indicator-value" id="ind-sma20">-</span>
+                    </div>
+                    <div class="indicator-item">
+                        <span class="indicator-name">
+                            <span class="indicator-dot" style="background: #10b981;"></span>
+                            SMA 50
+                        </span>
+                        <span class="indicator-value" id="ind-sma50">-</span>
+                    </div>
+                    <div class="indicator-item">
+                        <span class="indicator-name">
+                            <span class="indicator-dot" style="background: #f59e0b;"></span>
+                            EMA 20
+                        </span>
+                        <span class="indicator-value" id="ind-ema20">-</span>
+                    </div>
+                    <div class="indicator-item">
+                        <span class="indicator-name">
+                            <span class="indicator-dot" style="background: #ec4899;"></span>
+                            Volatility
+                        </span>
+                        <span class="indicator-value" id="ind-volatility">-</span>
+                    </div>
+                    <div class="rsi-gauge">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-secondary); font-size: 0.8rem;">RSI (14)</span>
+                            <span id="rsi-value" style="font-weight: 600;">-</span>
+                        </div>
+                        <div class="rsi-bar">
+                            <div class="rsi-marker" id="rsi-marker" style="left: 50%;"></div>
+                        </div>
+                        <div class="rsi-labels">
+                            <span>Oversold</span>
+                            <span>Neutral</span>
+                            <span>Overbought</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Price Chart -->
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <span class="card-title">📉 Price History (60 Days)</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="price-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 52 Week Range -->
+                <div class="card range-card">
+                    <div class="card-header">
+                        <span class="card-title">📅 52-Week Range</span>
+                    </div>
+                    <div class="range-display">
+                        <div class="range-bar">
+                            <div class="range-current" id="range-marker" style="left: 50%;"></div>
+                        </div>
+                        <div class="range-values">
+                            <span class="range-low" id="range-low">$0.00</span>
+                            <span style="color: var(--text-secondary);">Current</span>
+                            <span class="range-high" id="range-high">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Volume Chart -->
+                <div class="card volume-card">
+                    <div class="card-header">
+                        <span class="card-title">📊 Volume</span>
+                    </div>
+                    <div class="volume-chart">
+                        <canvas id="volume-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="disclaimer">
+                ⚠️ <strong>Disclaimer:</strong> This is for educational purposes only. Stock predictions are inherently
+                uncertain. Do NOT use for actual trading decisions.
+            </div>
+        </div>
+
+        <footer>
+            <p>Built with TensorFlow LSTM | © 2026</p>
+        </footer>
+    </div>
+
+    <script>
+        let priceChart = null;
+        let volumeChart = null;
+
+        function quickPick(ticker) {
+            document.getElementById('ticker-input').value = ticker;
+            predict();
+        }
+
+        function toggleHelp() {
+            const content = document.getElementById('help-content');
+            content.classList.toggle('hidden');
+        }
+
+        function formatPrice(price, isIDR) {
+            if (isIDR) {
+                return 'Rp ' + price.toLocaleString('id-ID', { maximumFractionDigits: 0 });
+            }
+            return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function formatVolume(vol) {
+            if (vol >= 1e9) return (vol / 1e9).toFixed(2) + 'B';
+            if (vol >= 1e6) return (vol / 1e6).toFixed(2) + 'M';
+            if (vol >= 1e3) return (vol / 1e3).toFixed(2) + 'K';
+            return vol.toString();
+        }
+
+        async function predict() {
+            const ticker = document.getElementById('ticker-input').value.trim().toUpperCase();
+            if (!ticker) {
+                showError('Please enter a stock ticker');
+                return;
+            }
+
+            showLoading(true);
+            hideError();
+            hideDashboard();
+
+            try {
+                const response = await fetch(`/api/predict/${ticker}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+
+                displayDashboard(data);
+            } catch (err) {
+                showError('Error connecting to server. Make sure Flask is running.');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').classList.toggle('hidden', !show);
+            document.getElementById('predict-btn').disabled = show;
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('error');
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        }
+
+        function hideError() {
+            document.getElementById('error').classList.add('hidden');
+        }
+
+        function hideDashboard() {
+            document.getElementById('dashboard').classList.add('hidden');
+        }
+
+        function displayDashboard(data) {
+            const isIDR = data.stock_info.is_indonesian;
+            const fmt = (p) => formatPrice(p, isIDR);
+
+            // Stock Header
+            document.getElementById('stock-icon').textContent = data.ticker.charAt(0);
+            document.getElementById('stock-ticker').textContent = data.ticker;
+            document.getElementById('stock-exchange').textContent = data.stock_info.exchange;
+            document.getElementById('last-update').textContent = data.last_update;
+            document.getElementById('current-price').textContent = fmt(data.current_price);
+
+            const changeEl = document.getElementById('price-change');
+            changeEl.textContent = (data.change_percent >= 0 ? '+' : '') + data.change_percent.toFixed(2) + '%';
+            changeEl.className = 'price-change ' + data.signal.toLowerCase();
+
+            // Prediction
+            const signalBadge = document.getElementById('signal-badge');
+            signalBadge.textContent = data.signal;
+            signalBadge.className = 'signal-badge ' + data.signal.toLowerCase();
+
+            document.getElementById('pred-current').textContent = fmt(data.current_price);
+            document.getElementById('pred-predicted').textContent = fmt(data.predicted_price);
+
+            const strengthFill = document.getElementById('strength-fill');
+            strengthFill.style.width = data.signal_strength + '%';
+            strengthFill.className = 'strength-fill ' + data.signal.toLowerCase();
+            document.getElementById('strength-value').textContent = data.signal_strength.toFixed(0) + '%';
+
+            // Statistics
+            document.getElementById('stat-open').textContent = fmt(data.statistics.open);
+            document.getElementById('stat-high').textContent = fmt(data.statistics.high);
+            document.getElementById('stat-low').textContent = fmt(data.statistics.low);
+            document.getElementById('stat-prev').textContent = fmt(data.statistics.prev_close);
+            document.getElementById('stat-volume').textContent = formatVolume(data.statistics.volume);
+            document.getElementById('stat-avg-volume').textContent = formatVolume(data.statistics.avg_volume);
+
+            // Indicators
+            document.getElementById('ind-sma20').textContent = data.indicators.sma_20 ? fmt(data.indicators.sma_20) : '-';
+            document.getElementById('ind-sma50').textContent = data.indicators.sma_50 ? fmt(data.indicators.sma_50) : '-';
+            document.getElementById('ind-ema20').textContent = data.indicators.ema_20 ? fmt(data.indicators.ema_20) : '-';
+            document.getElementById('ind-volatility').textContent = data.indicators.volatility ? data.indicators.volatility.toFixed(2) + '%' : '-';
+
+            // RSI
+            const rsi = data.indicators.rsi_14;
+            document.getElementById('rsi-value').textContent = rsi ? rsi.toFixed(1) : '-';
+            document.getElementById('rsi-marker').style.left = rsi ? rsi + '%' : '50%';
+
+            // 52-Week Range
+            document.getElementById('range-low').textContent = fmt(data.statistics.week_52_low);
+            document.getElementById('range-high').textContent = fmt(data.statistics.week_52_high);
+            const rangePercent = (data.current_price - data.statistics.week_52_low) /
+                (data.statistics.week_52_high - data.statistics.week_52_low) * 100;
+            document.getElementById('range-marker').style.left = Math.min(Math.max(rangePercent, 5), 95) + '%';
+
+            // Charts
+            updatePriceChart(data.charts);
+            updateVolumeChart(data.charts);
+
+            document.getElementById('dashboard').classList.remove('hidden');
+        }
+
+        function updatePriceChart(charts) {
+            const ctx = document.getElementById('price-chart').getContext('2d');
+            if (priceChart) priceChart.destroy();
+
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: charts.dates,
+                    datasets: [{
+                        label: 'Close',
+                        data: charts.prices,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: {
+                            display: true,
+                            ticks: { color: '#64748b', maxTicksLimit: 6 },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
+                        y: {
+                            display: true,
+                            ticks: { color: '#64748b' },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateVolumeChart(charts) {
+            const ctx = document.getElementById('volume-chart').getContext('2d');
+            if (volumeChart) volumeChart.destroy();
+
+            volumeChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: charts.dates.slice(-20),
+                    datasets: [{
+                        label: 'Volume',
+                        data: charts.volumes.slice(-20),
+                        backgroundColor: 'rgba(99, 102, 241, 0.6)',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: {
+                            display: true,
+                            ticks: {
+                                color: '#64748b',
+                                callback: (v) => formatVolume(v)
+                            },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
