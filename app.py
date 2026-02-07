@@ -18,7 +18,7 @@ from logger import get_logger
 logger = get_logger(__name__)
 
 # Flask app - serve index.html directly from web folder
-app = Flask(__name__, static_folder='web')
+app = Flask(__name__, static_folder='web', static_url_path='/static')
 
 # Import modules
 from data_loader import DataLoader
@@ -62,19 +62,26 @@ def calculate_ema(prices, period):
         ema = (price - ema) * multiplier + ema
     return ema
 
-def get_prediction(ticker, epochs=20):
+def get_prediction(ticker, epochs=20, period='1y'):
     """Get comprehensive prediction and analysis for a stock"""
     loader = DataLoader(data_dir=DATA.data_dir)
     
     # Load or download data
     try:
+        # Check if we need to force download for a specific period if not available
         data = loader.load_data(ticker)
+        
+        # If requested period is longer than available data, might need re-download
+        # For simplicity, we'll use available data unless it's too short
+        if len(data) < 60:
+             data = loader.download_stock_data(ticker, period=DATA.default_period)
     except FileNotFoundError:
         try:
-            data = loader.download_stock_data(ticker, period=DATA.default_period)
+            download_period = period if period in ['1y', '2y', '5y', 'max'] else DATA.default_period
+            data = loader.download_stock_data(ticker, period=download_period)
         except:
             return None, "Could not download data for " + ticker
-    
+            
     # Check for existing model using config helper
     model_path = config.get_model_path(ticker) + '_final.keras'
     scaler_path = config.get_scaler_path(ticker)
@@ -112,9 +119,28 @@ def get_prediction(ticker, epochs=20):
     predicted_price = float(next_day_price[0][0])
     change_pct = (predicted_price - current_price) / current_price * 100
     
-    # Get historical data for charts
-    recent_data = data.tail(60)
-    prices = data['Close'].values
+    # Get historical data for charts based on requested period
+    # Define fast lookups for slicing
+    period_map = {
+        '1mo': 22,
+        '3mo': 66,
+        '6mo': 132,
+        '1y': 252,
+        'ytd': 0, # handled separately
+        'all': 0 # all data
+    }
+    
+    days_to_show = period_map.get(period, 252) # Default to 1y
+    
+    if period == 'ytd':
+        current_year =  data['Date'].iloc[-1].year
+        recent_data = data[data['Date'].dt.year == current_year]
+    elif period == 'all':
+        recent_data = data
+    else:
+        recent_data = data.tail(days_to_show)
+        
+    prices = data['Close'].values # Indicators use full data for accuracy
     
     # Calculate technical indicators
     rsi = calculate_rsi(prices)
@@ -194,7 +220,8 @@ def predict(ticker):
     """Predict stock price for given ticker"""
     logger.info(f"Prediction request for: {ticker}")
     epochs = request.args.get('epochs', 20, type=int)
-    result, error = get_prediction(ticker.upper(), epochs)
+    period = request.args.get('period', '1y')
+    result, error = get_prediction(ticker.upper(), epochs, period)
     
     if error:
         logger.error(f"Prediction failed for {ticker}: {error}")

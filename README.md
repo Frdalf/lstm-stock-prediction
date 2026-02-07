@@ -11,6 +11,7 @@ Neural network untuk memprediksi harga saham menggunakan LSTM (Long Short-Term M
 - 🌐 **Web Dashboard** - Analisis saham dengan UI modern dan interaktif
 - 📊 **Technical Indicators** - RSI, SMA, EMA, Volatility
 - 🔮 **AI Prediction** - LSTM 3-layer dengan signal strength meter
+- ⏱️ **Timeframes** - Pilihan 1M, 3M, 6M, 1Y, ALL dengan instant caching
 - 📈 **Multi-chart** - Price history, volume, 52-week range
 - 🇮🇩 **Multi-market** - Support saham Indonesia (.JK) dan US market
 - ⚡ **Auto-download** - Data otomatis dari Yahoo Finance
@@ -71,6 +72,7 @@ jupyter notebook
 
 ```
 stock-prediction/
+├── vercel.json           # Vercel deployment config
 ├── app.py                # Flask web server
 ├── config.py             # Centralized configuration
 ├── web/
@@ -189,6 +191,23 @@ pytest tests/ --cov=src --cov-report=html
 # Skip slow tests
 pytest tests/ -v -m "not slow"
 ```
+
+## 🚀 Deployment (Vercel)
+
+Project ini sudah dikonfigurasi untuk deployment ke [Vercel](https://vercel.com).
+
+1.  **Install Vercel CLI**
+    ```bash
+    npm i -g vercel
+    ```
+
+2.  **Deploy**
+    ```bash
+    vercel
+    ```
+
+3.  **Environment Variables**
+    Jika menggunakan API key atau custom config, atur di Vercel Dashboard > Settings > Environment Variables.
 
 ## ⚠️ Disclaimer
 

@@ -139,6 +139,8 @@ class DataLoader:
             except Exception as e:
                 logger.error(f"Error downloading {ticker}: {e}")
         return stock_data
+    
+
 
 
 # Example usage
